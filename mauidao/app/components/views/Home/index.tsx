@@ -1,0 +1,463 @@
+import { ethers } from "ethers";
+import { FC, useRef, useState, useEffect } from "react";
+import { Navigate, Routes, Route, Link, useLocation } from "react-router-dom";
+import WalletConnectProvider from "@walletconnect/web3-provider";
+import Web3Modal from "web3modal";
+import { useAppDispatch } from "state";
+import { bonds, urls } from "@klimadao/lib/constants";
+import { useSelector } from "react-redux";
+import { selectBalances } from "state/selectors";
+import { loadAppDetails } from "actions/app";
+import { calcBondDetails } from "actions/bonds";
+import { loadAccountDetails } from "actions/user";
+
+import { Stake } from "components/views/Stake";
+import { Redeem } from "components/views/Redeem";
+import { PKlima } from "components/views/PKlima";
+import { Info } from "components/views/Info";
+import { Loading } from "components/views/Loading";
+import { ChooseBond } from "components/views/ChooseBond";
+import { Bond } from "components/views/Bond";
+import { Wrap } from "components/views/Wrap";
+
+import { InvalidNetworkModal } from "components/InvalidNetworkModal";
+import { InvalidRPCModal } from "components/InvalidRPCModal";
+
+import styles from "./index.module.css";
+
+type EIP1139Provider = ethers.providers.ExternalProvider & {
+  on: (e: "accountsChanged" | "chainChanged", cb: () => void) => void;
+  remove: (e: "accountsChanged" | "chainChanged", cb: () => void) => void;
+};
+
+/** wrap in useEffect to skip on server-side render */
+const useWeb3Modal = () => {
+  const ref = useRef<Web3Modal>();
+  useEffect(() => {
+    const modal = new Web3Modal({
+      cacheProvider: true, // optional
+      providerOptions: {
+        walletconnect: {
+          package: WalletConnectProvider, // required
+          options: {
+            // infuraId: INFURA_ID,
+            rpc: { 
+              137: urls.polygonMainnetRpc,
+              80001: urls.polygonTestnetRpc 
+            },
+          },
+        },
+      },
+    });
+    ref.current = modal;
+  }, []);
+  return ref.current;
+};
+
+type LoadWeb3Modal = () => Promise<void>;
+const useProvider = (): [
+  ethers.providers.Web3Provider | ethers.providers.JsonRpcProvider,
+  string | undefined,
+  Web3Modal | undefined,
+  LoadWeb3Modal
+] => {
+  const fallbackProvider = useRef<ethers.providers.JsonRpcProvider>();
+  console.log("fallbackProvider" + fallbackProvider.toString());
+  console.log(fallbackProvider);
+  const web3Modal = useWeb3Modal();
+  const [provider, setProvider] = useState<ethers.providers.Web3Provider>();
+  const [address, setAddress] = useState<string>();
+
+  const loadWeb3Modal = async () => {
+    try {
+      const modalProvider = await web3Modal?.connect();
+      if (modalProvider) {
+        const provider = new ethers.providers.Web3Provider(modalProvider);
+        const address = await provider.getSigner().getAddress();
+        setProvider(provider);
+        setAddress(address);
+      }
+    } catch (e) {
+      // handle bug where old cached providers cause the modal to keep reappearing
+      web3Modal?.clearCachedProvider();
+    }
+  };
+  useEffect(() => {
+    if (web3Modal?.cachedProvider) {
+      loadWeb3Modal();
+    }
+  }, [web3Modal]);
+
+  useEffect(() => {
+    const handleChainChanged = () => {
+      window.location.reload();
+    };
+    const handleAccountsChanged = () => {
+      window.location.reload();
+    };
+    if (provider && provider.provider) {
+      const typedProvider = provider.provider as EIP1139Provider;
+      // EIP-1193 Providers (metamask) have these methods
+      typedProvider.on("chainChanged", handleChainChanged);
+      typedProvider.on("accountsChanged", handleAccountsChanged);
+    }
+    return () => {
+      const typedProvider = provider?.provider as EIP1139Provider;
+      if (typedProvider && typedProvider.remove) {
+        typedProvider.remove("accountsChanged", handleAccountsChanged);
+        typedProvider.remove("chainChanged", handleChainChanged);
+      }
+    };
+  }, [provider]);
+
+  if (!provider && !fallbackProvider.current) {
+    fallbackProvider.current = new ethers.providers.JsonRpcProvider(
+      urls.polygonMainnetRpc
+    );
+    return [fallbackProvider.current, "", web3Modal, loadWeb3Modal];
+  }
+  return [
+    provider || fallbackProvider.current!,
+    address,
+    web3Modal,
+    loadWeb3Modal,
+  ];
+};
+
+export const Home: FC = () => {
+  const dispatch = useAppDispatch();
+  const [chainId, setChainId] = useState<number>();
+  const [showRPCModal, setShowRPCModal] = useState(false);
+
+  const [provider, address, web3Modal, loadWeb3Modal] = useProvider();
+  const { pathname } = useLocation();
+  const [path, setPath] = useState("");
+  const balances = useSelector(selectBalances);
+
+  /**
+   * This is a hack to force re-render of nav component
+   * because SSR hydration doesn't show active path
+   */
+  useEffect(() => {
+    setPath(pathname);
+  }, [pathname]);
+
+  const handleRPCError = () => {
+    setShowRPCModal(true);
+  };
+
+  const loadNetworkInfo = async () => {
+    const networkInfo = await provider.getNetwork();
+    if (chainId !== networkInfo.chainId) {
+      setChainId(networkInfo.chainId);
+      // if network is invalid, modal will ask for network change -> page will reload
+    }
+  };
+
+  const loadUserInfo = async (addr: string) => {
+    try {
+      dispatch(
+        loadAccountDetails({
+          address: addr,
+          provider,
+          onRPCError: handleRPCError,
+        })
+      );
+    } catch (e) {
+      console.error("LOAD USER INFO CAUGHT", e);
+    }
+  };
+
+  const initApp = async () => {
+    // dispatch(
+    //   loadAppDetails({
+    //     provider,
+    //     onRPCError: handleRPCError,
+    //   })
+    // );
+    // dispatch(
+    //   calcBondDetails({
+    //     bond: "klima_bct_lp",
+    //     value: "",
+    //     provider,
+    //   })
+    // );
+    // dispatch(
+    //   calcBondDetails({
+    //     bond: "bct_usdc_lp",
+    //     value: "",
+    //     provider,
+    //   })
+    // );
+    dispatch(
+      calcBondDetails({
+        bond: "bct",
+        value: "",
+        provider,
+      })
+    );
+  };
+
+  useEffect(() => {
+    initApp();
+  }, []);
+
+  useEffect(() => {
+    if (provider) {
+      loadNetworkInfo();
+    }
+  }, [provider]);
+
+  useEffect(() => {
+    if (address) {
+      loadUserInfo(address);
+    }
+  }, [address]);
+
+  /**
+   * Outline manager for a11y
+   * So we can hide outlines when clicking, only show them when tabbing
+   */
+  useEffect(() => {
+    const handleMousedown = () => {
+      document.body.removeEventListener("mousedown", handleMousedown);
+      document.body.classList.remove("user-is-tabbing");
+      document.body.addEventListener("keydown", handleKeydown);
+    };
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.keyCode === 9) {
+        document.body.removeEventListener("keydown", handleKeydown);
+        document.body.classList.add("user-is-tabbing");
+        document.body.addEventListener("mousedown", handleMousedown);
+      }
+    };
+    document.body.addEventListener("keydown", handleKeydown);
+    return () => {
+      document.body.removeEventListener("keydown", handleKeydown);
+      document.body.removeEventListener("mousedown", handleMousedown);
+    };
+  }, []);
+
+  const disconnect = async () => {
+    const untypedProvider = provider as any;
+    if (
+      untypedProvider &&
+      untypedProvider.provider &&
+      typeof untypedProvider.provider.disconnect === "function"
+    ) {
+      await untypedProvider.provider.disconnect();
+    }
+    if (untypedProvider && typeof untypedProvider.disconnect === "function") {
+      await untypedProvider.disconnect();
+    }
+    if (web3Modal) {
+      web3Modal.clearCachedProvider();
+    }
+    setTimeout(() => {
+      window.location.reload();
+    }, 10);
+  };
+
+  const isConnected = !!address;
+
+  const showPklimaButton = path === "/pklima" || !!Number(balances?.pklima);
+  const showRedeemButton =
+    path === "/redeem" ||
+    !!Number(balances?.aklima) ||
+    !!Number(balances?.alklima);
+
+  // render the nav twice-- on both sides of screen-- but the second one is hidden.
+  // A hack to keep the card centered in the viewport.
+  const nav = (
+    <nav className={styles.nav}>
+      {chainId === 80001 && (
+        <p className={styles.testnet_warning}>
+          ⚠️You are connected to <strong>testnet</strong>
+          <br />
+          <em>{`"where everything is made up and the points don't matter."`}</em>
+        </p>
+      )}
+      {showRedeemButton && (
+        <Link
+          className={styles.textButton}
+          to="/redeem"
+          data-active={path === "/redeem"}
+        >
+          REDEEM
+        </Link>
+      )}
+      <Link
+        className={styles.textButton}
+        to="/stake"
+        data-active={path === "/stake"}
+      >
+        STAKE
+      </Link>
+      <Link
+        className={styles.textButton}
+        to="/wrap"
+        data-active={path === "/wrap"}
+      >
+        WRAP
+      </Link>
+      <Link
+        className={styles.textButton}
+        to="/bonds"
+        data-active={path.includes("/bonds")}
+      >
+        BOND
+      </Link>
+      <Link
+        className={styles.textButton}
+        to="/info"
+        data-active={path === "/info"}
+      >
+        INFO
+      </Link>
+      {showPklimaButton && (
+        <Link
+          className={styles.textButton}
+          to="/pklima"
+          data-active={path === "/pklima"}
+        >
+          pKLIMA
+        </Link>
+      )}
+    </nav>
+  );
+
+  return (
+    <>
+      <div className={styles.app}>
+        <div className={styles.app_bgGradient} />
+        <header className={styles.header}>
+          <div>
+            <a href="https://klimadao.finance" style={{ justifySelf: "start" }}>
+              <img
+                className={styles.logo}
+                src="/klima-logo.png"
+                alt=""
+                role="presentation"
+              />
+            </a>
+            <p className={styles.header_subtitle}>
+              Welcome to the Klima dApp. Bond carbon to buy KLIMA. Stake KLIMA
+              to earn interest.
+            </p>
+          </div>{" "}
+          {!isConnected && (
+            <button
+              type="button"
+              className={styles.connectWalletButton}
+              onClick={loadWeb3Modal}
+            >
+              CONNECT WALLET
+            </button>
+          )}
+          {isConnected && (
+            <button
+              type="button"
+              className={styles.disconnectWalletButton}
+              onClick={disconnect}
+            >
+              DISCONNECT WALLET
+            </button>
+          )}
+        </header>
+        <main className={styles.main}>
+          {nav}
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <>
+                  <Loading />
+                  {path === "/" && <Navigate to="/stake" />}
+                </>
+              }
+            />
+            <Route
+              path="/stake"
+              element={
+                <Stake
+                  address={address}
+                  provider={provider}
+                  isConnected={isConnected}
+                />
+              }
+            />
+            <Route
+              path="/redeem"
+              element={
+                <Redeem
+                  address={address}
+                  provider={provider}
+                  isConnected={isConnected}
+                />
+              }
+            />
+            <Route
+              path="/pklima"
+              element={
+                <PKlima
+                  address={address}
+                  provider={provider}
+                  isConnected={isConnected}
+                />
+              }
+            />
+            <Route
+              path="/wrap"
+              element={
+                <Wrap
+                  address={address}
+                  provider={provider}
+                  isConnected={isConnected}
+                />
+              }
+            />
+            <Route path="/info" element={<Info />} />
+            <Route path="/bonds" element={<ChooseBond />} />
+            {bonds.map((bond) => {
+              return (
+                <Route
+                  key={bond}
+                  path={`/bonds/${bond}`}
+                  element={
+                    <Bond
+                      provider={provider}
+                      address={address}
+                      bond={bond}
+                      isConnected={isConnected}
+                    />
+                  }
+                />
+              );
+            })}
+          </Routes>
+          <div className={styles.invisibleColumn}>{nav}</div>
+        </main>
+        <footer className={styles.footer}>
+          <div className={styles.footer_content}>
+            <img className={styles.footer_logo} src="/klima-logo.png" alt="" />
+            <nav className={styles.footer_content_nav}>
+              <a href="https://klimadao.finance/">home</a>
+              <a href={urls.gitbook}>docs</a>
+              <a href={urls.blog}>blog</a>
+              <a href={urls.emailSignUp}>newsletter</a>
+              <a href={urls.discordInvite}>community</a>
+            </nav>
+          </div>
+        </footer>
+      </div>
+      <InvalidNetworkModal provider={provider} />
+      {showRPCModal && (
+        <InvalidRPCModal
+          onHide={() => {
+            setShowRPCModal(false);
+          }}
+        />
+      )}
+    </>
+  );
+};

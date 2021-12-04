@@ -1,0 +1,186 @@
+  //RAN
+
+  //deploy klima tokens
+  // const firstEpochBlock = '8961000';
+  // const epochLengthInBlocks = '2200';
+  // const firstEpochNumber = '338';
+
+
+  // const FruitToken = await ethers.getContractFactory("KlimaToken");
+  // const fruitToken = await FruitToken.deploy();
+  // console.log("FRUIT Token Deployed at: ", fruitToken.address);
+  // const FruitTreasury = await ethers.getContractFactory("KlimaTreasury");
+  
+// 0xDcb7eE94735e6713a6671e60abE780b3188b5111
+
+  // // address _KLIMA,
+  // // address _BCT,
+  // // uint256 _blocksNeededForQueue
+
+  // const fruitTreasury = await FruitTreasury.deploy(fruitTokenAddress, bctAddress, 0);
+  // console.log("fruitTreasury Token Deployed at: ", fruitTreasury.address);
+
+  // const Distributor = await ethers.getContractFactory("Distributor");
+
+  // // constructor( address _treasury, address _klima, uint _epochLength, uint _nextEpochBlock ) {
+  // //nextEpochBlock
+  // const distributor = await Distributor.deploy(treasuryAddress, fruitTokenAddress, 
+  //   epochLengthInBlocks, epochLengthInBlocks);
+
+  // console.log("distributor Token Deployed at: ", distributor.address);
+  
+  // const sKlimaToken = await ethers.getContractFactory("sKLIMAv2");
+  // const sklimaToken = await sKlimaToken.deploy();
+  // console.log("sFruit Token Deployed at: ", sklimaToken.address);  
+
+  // const KlimaBondingCalculator = await ethers.getContractFactory("contracts/bonds/regular/KlimaBondingCalculator_v2.sol:KlimaBondingCalculator");
+
+  // // address public KLIMA;
+  // // address public USDC;  
+
+  // const klimaBondingCalculator = await KlimaBondingCalculator.deploy(fruitTokenAddress, usdcAddress);
+
+  // console.log("KlimaBondingCalculator Deployed at: ", klimaBondingCalculator.address);
+  
+  // const KlimaStaking = await ethers.getContractFactory("contracts/staking/regular/KlimaStaking_v2.sol:KlimaStaking");
+
+  // //KlimaStaking
+  // // address _KLIMA,
+  // // address _sKLIMA,
+  // // uint _epochLength,
+  // // uint _firstEpochNumber,
+  // // uint _firstEpochBlock
+
+  // const klimaStaking = await KlimaStaking.deploy(fruitTokenAddress, sFruitAddress, 
+  //   epochLengthInBlocks, firstEpochNumber, firstEpochBlock);
+
+  // console.log("FruitStaking Deployed at: ", klimaStaking.address);
+
+  // const StakingHelper = await ethers.getContractFactory("StakingHelper");
+
+  // // address public immutable staking;
+  // // address public immutable KLIMA;
+
+
+  // const stakingHelper = await StakingHelper.deploy(stakingAddress, fruitTokenAddress);
+
+  //   console.log("stakingHelper Deployed at: ", stakingHelper.address);
+
+
+  // const FruitBondDepository = await ethers.getContractFactory("KlimaBondDepository");
+
+  // // address _KLIMA,
+  // // address _principle,token used to create bond
+  // // address _treasury,
+  // // address _DAO, 
+  // // address _bondCalculator
+
+  // const bctBondDepository = await FruitBondDepository.deploy(fruitTokenAddress, 
+  //   bctAddress, 
+  //   treasuryAddress, 
+  //   daoAddress,
+  //   bondingCalculatorAddress);
+
+  //   console.log("FruitBondDepository Deployed at: ", bctBondDepository.address);
+
+
+
+//TO RUN
+  const accounts = await hre.ethers.getSigners();
+  const daoAddress = ethers.utils.getAddress('0xeF13847E8d7E4Ccc232A2e90B6215b01BD28E789')
+  const fruitTokenAddress = ethers.utils.getAddress('0xA85e54a3901B9Ae1912F3419f2D85aeEdFE625C1')
+  const bctAddress = ethers.utils.getAddress("0x2f800db0fdb5223b3c3f354886d907a671414a7f"); 
+  //a polygon address where all the fees will be sent.
+  
+  // const fruitTreasury = await FruitTreasury.deploy(fruitTokenAddress, fruitTokenAddress, fruitTokenAddress, fruitTokenAddress, 0);
+
+  const FruitTreasury = await ethers.getContractFactory("KlimaTreasury");
+  const fruitTreasury = await FruitTreasury.deploy(fruitTokenAddress, bctAddress, 0);
+  console.log('fruitTreasury' + fruitTreasury.address)
+  throw "hey"
+  // const fruitTreasury = await FruitTreasury2.deploy('0xA85e54a3901B9Ae1912F3419f2D85aeEdFE625C1', bctAddress, 0);
+  const fruitTreasury2 = await FruitTreasury2.deploy('0xA85e54a3901B9Ae1912F3419f2D85aeEdFE625C1', "0x8f8b7D5d12c1fC37f20a89Bf4Dfe1E787Da529B5", 0);
+  const fruitTreasury3 = await FruitTreasury2.deploy(1, 3, 0);
+
+  
+  // const KLIMA_LP_BONDS = await ethers.getContractFactory("KlimaLPBonds_v4");
+  // const klimlpbonds = await KLIMA_LP_BONDS.deploy();
+
+  // // const factory = new ContractFactory(abi, bytecode, signer)
+
+  // console.log("FRUIT Token Deployed at: ", klimlpbonds.address);  
+
+
+  // const KlimaTreasury = await ethers.getContractFactory("KlimaTreasury");
+
+  // // address _KLIMA,
+  // // address _BCT,
+  // // uint _blocksNeededForQueue
+
+  // const klimaTreasury = await KlimaTreasury.deploy(fruitToken.address, bctAddress, 0);
+
+
+  // const MockOlympusTreasury = await ethers.getContractFactory("MockOlympusTreasury");
+  
+
+  //create a BCT Bond Depository
+
+  
+
+    const FruitBondDepository = await ethers.getContractFactory("KlimaBondDepository");
+
+    // address _KLIMA,
+    // address _principle,token used to create bond
+    // address _treasury,
+    // address _DAO, 
+    // address _bondCalculator
+  
+    const fruitBondDepository = await FruitBondDepository.deploy(fruitTokenAddress, 
+      bctAddress, 
+      mockOlympusTreasury.address, 
+      daoAddress,
+      klimaBondingCalculator.address);
+  
+      console.log("FruitBondDepository Deployed at: ", fruitBondDepository.address);
+
+
+
+
+
+
+
+
+
+// // function initializeBondTerms( 
+// //   uint _controlVariable, 
+// //   uint _vestingTerm,
+// //   uint _minimumPrice,
+// //   uint _maxPayout,
+// //   uint _fee,
+// //   uint _maxDebt,
+// //   uint _initialDebt
+// // ) 
+
+
+
+// // const accounts = await hre.ethers.getSigners();
+
+
+// // const signerRequest = await bctBondContract.connect(signer1)
+// // console.log(signerRequest)
+
+// const bctBondContractReq = await bctBondContract.debtRatio()
+// console.log('bctBondContractReq')
+// console.log(parseInt(bctBondContractReq))
+
+// // const result = await bctBondContract.initializeBondTerms(
+// //   bctBondBCV, 
+// //   bondVestingLength, 
+// //   minBondPrice, 
+// //   maxBondPayout, 
+// //   bondFee, 
+// //   maxBondDebt, 
+// //   intialBondDebt)
+
+// // const res3 = await bctBondContract.setStaking(stakingAddress, stakingHelperAddress);
+// // console.log(res3)
