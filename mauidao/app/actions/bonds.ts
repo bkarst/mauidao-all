@@ -96,8 +96,8 @@ export const calcBondDetails = (params: {
     console.log("maxPayout")
     const debtRatio = await bondContract.debtRatio();
     console.log("debtRatio")
-    const bondPrice = await bondContract.bondPrice();
-    // const bondPrice = await bondContract.bondPriceInUSD();
+    // const bondPrice = await bondContract.bondPrice();
+    const bondPrice = await bondContract.bondPriceInUSD();
     console.log("bondPriceInUSD")
     if (params.bond === "klima_bct_lp") {
       const bondCalcContract = new ethers.Contract(
